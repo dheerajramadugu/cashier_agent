@@ -1,30 +1,31 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-export function useSupabase(tableName) {
+export function useSupabase(table) {
   const [data, setData] = useState([]);
 
-  // initial fetch
+  // Fetch initial data
   const fetchData = async () => {
-    const { data, error } = await supabase.from(tableName).select("*");
+    const { data, error } = await supabase.from(table).select("*").order("id");
+
     if (!error) setData(data);
   };
 
   useEffect(() => {
     fetchData();
 
-    // real-time subscription
+    // Real-time listener
     const channel = supabase
-      .channel(`table_changes_${tableName}`)
+      .channel(`${table}-changes`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: tableName },
+        { event: "*", schema: "public", table },
         fetchData
       )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [tableName]);
+  }, [table]);
 
-  return { data, refresh: fetchData };
+  return { data };
 }
